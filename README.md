@@ -19,7 +19,7 @@
 ## How to use
 - To make a LUKS drive:
 ```
-$ create_luks.sh
+$ make_luks.sh
 ```
 
 - To (re)generate a config file:
