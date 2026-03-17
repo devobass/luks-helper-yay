@@ -51,13 +51,18 @@ open_luks() {
 }
 
 init() {
-	rm -f ./config.sh
 	printf "Select LUKS drive.\n"
 	printf "Accepted input: /dev/sdX, /dev/nvmeXnYpZ.\n"
 	blkid --output device
 	read device
 
 	LUKS_UUID="$(blkid -s UUID -o value "$device")"
+
+	if [ -z "$LUKS_UUID" ]
+	then
+		printf "Drive %s not found.\n" "$device"
+		exit 1
+	fi
 	
 	printf "Select drive that has the keyfile.\n"
 	printf "Accepted input: /dev/sdX, /dev/nvmeXnYpZ.\n"
@@ -65,6 +70,14 @@ init() {
 	read device
 
 	USB_UUID="$(blkid -s UUID -o value "$device")"
+
+	if [ -z "$USB_UUID" ]
+	then
+		printf "Drive %s not found.\n" "$device"
+		exit 1
+	fi
+
+	rm -f ./config.sh
 
 	printf "LUKS_UUID=\"$LUKS_UUID\"\n" >> "./config.sh"
 	printf "USB_UUID=\"$USB_UUID\"\n" >> "./config.sh"
