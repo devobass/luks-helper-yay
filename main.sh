@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 
+set -e
+
 if [ "$(id -u)" -ne 0 ]
 then
 	printf "Not running as root, try again.\n"
