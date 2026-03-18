@@ -14,6 +14,12 @@ close() {
 trap close EXIT
 
 mount_usb() {
+	if ! [ -e "/dev/disk/by-uuid/$USB_UUID" ]
+	then
+		printf "USB key drive not found, exiting."
+		exit 1
+	fi
+
 	if mountpoint -q "/media" 
 	then
 		printf "Please unmount /media before continuing.\n"
@@ -38,10 +44,22 @@ verify() {
 }
 
 create_luks() {
-	if [ "$(blkid "/dev/disk/by-uuid/$LUKS_UUID" -s TYPE -o value)" = "crypto_LUKS" ]
+
+	if ! [ -e "/dev/disk/by-uuid/$LUKS_UUID" ]
 	then
-		printf "LUKS detected, stopping."
+		printf "LUKS drive not found, exiting."
 		exit 1
+	fi
+
+	if [ -z "$(blkid "/dev/disk/by-uuid/$LUKS_UUID" -s TYPE -o value)" ]
+	then
+		printf "Another formatted filesystem already existing, continue? (y/n) "
+		read answer
+		case "$answer" in
+			y) printf "Continuing.\n";;
+			Y) printf "Continuing.\n";;
+			*) exit 1 ;;
+		esac
 	fi
 	cryptsetup luksFormat --type luks2 "/dev/disk/by-uuid/$LUKS_UUID"
 }
