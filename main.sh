@@ -7,7 +7,7 @@ then
 	printf "Not running as root, try again.\n"
 	exit 1
 fi
-
+ 
 close() {
 	printf "Closing LUKS.\n"
 
@@ -17,20 +17,19 @@ close() {
 }
 
 mount_drives() {
+	if ! [ -e "/dev/disk/by-uuid/$USB_UUID" ]
+	then
+		printf "USB key drive not found, exiting."
+		exit 1
+	fi
+
 	if mountpoint -q "/media"
 	then
 		printf "Please unmount /media before continuing.\n"
 		exit 1
 	fi
 
-	if mountpoint -q "/mnt"
-	then
-		printf "Please unmount /mnt before continuing.\n"
-		exit 1
-	fi
-
 	mkdir -p "/media/$USB_UUID"
-	mkdir -p "/mnt/$LUKS_UUID"
 
 	mount "/dev/disk/by-uuid/$USB_UUID" "/media/$USB_UUID"
 }
@@ -48,6 +47,20 @@ verify() {
 }
 
 open_luks() {
+	if ! [ -e "/dev/disk/by-uuid/$LUKS_UUID" ]
+	then
+		printf "LUKS drive not found, exiting."
+		exit 1
+	fi
+
+	if mountpoint -q "/mnt"
+	then
+		printf "Please unmount /mnt before continuing.\n"
+		exit 1
+	fi
+
+	mkdir -p "/mnt/$LUKS_UUID"
+
 	cryptsetup luksOpen --key-file "/media/$USB_UUID/$LUKS_UUID.key" "/dev/disk/by-uuid/$LUKS_UUID" "BACKUP_$LUKS_UUID"
 	mount "/dev/mapper/BACKUP_$LUKS_UUID" "/mnt/$LUKS_UUID"
 }
