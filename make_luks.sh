@@ -51,7 +51,7 @@ create_luks() {
 		exit 1
 	fi
 
-	if [ -z "$(blkid "/dev/disk/by-uuid/$LUKS_UUID" -s TYPE -o value)" ]
+	if [ -n "$(blkid "/dev/disk/by-uuid/$LUKS_UUID" -s TYPE -o value)" ]
 	then
 		printf "Another formatted filesystem already existing, continue? (y/n) "
 		read answer
