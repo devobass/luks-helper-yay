@@ -1,7 +1,6 @@
 #!/usr/bin/env sh
 
-set -e
-
+set -e 
 if [ "$(id -u)" -ne 0 ]
 then
 	printf "Not running as root, try again.\n"
@@ -11,26 +10,16 @@ fi
 close() {
 	printf "Closing LUKS.\n"
 
-	umount "/mnt/$LUKS_UUID"
-	cryptsetup luksClose "BACKUP_$LUKS_UUID"
-	umount "/media/$USB_UUID"
+	umount "/mnt/$LUKS_UUID" || true
+	cryptsetup luksClose "BACKUP_$LUKS_UUID" || true
+	if mountpoint -q "/media"
+	then
+		umount "/media/$USB_UUID" || true
+	fi
 }
 
 mount_drives() {
-	if ! [ -e "/dev/disk/by-uuid/$USB_UUID" ]
-	then
-		printf "USB key drive not found, exiting."
-		exit 1
-	fi
-
-	if mountpoint -q "/media"
-	then
-		printf "Please unmount /media before continuing.\n"
-		exit 1
-	fi
-
 	mkdir -p "/media/$USB_UUID"
-
 	mount "/dev/disk/by-uuid/$USB_UUID" "/media/$USB_UUID"
 }
 
@@ -44,9 +33,10 @@ verify() {
 		printf "WARNING: CHECKSUM MISMATCH, YOUR KEY MIGHT BE CORRUPTED!\n"
 		exit 1
 	fi
+	cd '/'
 }
 
-open_luks() {
+early_check() {
 	if ! [ -e "/dev/disk/by-uuid/$LUKS_UUID" ]
 	then
 		printf "LUKS drive not found, exiting."
@@ -59,10 +49,27 @@ open_luks() {
 		exit 1
 	fi
 
+	if ! [ -e "/dev/disk/by-uuid/$USB_UUID" ]
+	then
+		printf "USB key drive not found, exiting."
+		exit 1
+	fi
+
+	if mountpoint -q "/media"
+	then
+		printf "Please unmount /media before continuing.\n"
+		exit 1
+	fi
+}
+
+open_luks() {
 	mkdir -p "/mnt/$LUKS_UUID"
 
 	cryptsetup luksOpen --key-file "/media/$USB_UUID/$LUKS_UUID.key" "/dev/disk/by-uuid/$LUKS_UUID" "BACKUP_$LUKS_UUID"
 	mount "/dev/mapper/BACKUP_$LUKS_UUID" "/mnt/$LUKS_UUID"
+
+	umount "/dev/disk/by-uuid/$USB_UUID"
+	printf "It is now safe to unplug your key USB.\n"
 }
 
 init() {
@@ -99,6 +106,7 @@ init() {
 }
 
 open() {
+	early_check
 	mount_drives
 	verify
 	open_luks
